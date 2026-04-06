@@ -1,0 +1,4 @@
+3
+PUSH 10
+PUSH 20
+POP

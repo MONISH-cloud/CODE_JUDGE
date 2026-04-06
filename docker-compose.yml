@@ -1,0 +1,83 @@
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: codejudge
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    build: ./services/auth-service
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      JWT_SECRET: your_super_secret_key_change_this
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: codejudge
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  problem-service:
+    build: ./services/problem-service
+    ports:
+      - "3002:3002"
+    environment:
+      PORT: 3002
+      JWT_SECRET: your_super_secret_key_change_this
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: codejudge
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - testcases_data:/app/uploads
+      - ./seed/testcases:/Users/a91959/Downloads/ased project/seed/testcases
+
+  submission-service:
+    build: ./services/submission-service
+    ports:
+      - "3003:3003"
+    environment:
+      PORT: 3003
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: codejudge
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - testcases_data:/app/uploads
+      - ./seed/testcases:/Users/a91959/Downloads/ased project/seed/testcases
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - auth-service
+      - problem-service
+      - submission-service
+
+volumes:
+  postgres_data:
+  testcases_data:
